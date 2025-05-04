@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 import yt_dlp
-import os
 
 app = Flask(__name__)
 CORS(app)
@@ -10,7 +9,6 @@ CORS(app)
 YOUTUBE_API_KEY = 'AIzaSyCvt-w7yTuFFsL1HeidXVxW4o1C367AbUI'
 YOUTUBE_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search'
 
-# ✅ Search endpoint
 @app.route('/api/search')
 def search_songs():
     query = request.args.get('query', '')
@@ -45,7 +43,6 @@ def search_songs():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ✅ Stream endpoint
 @app.route('/api/stream/<video_id>')
 def stream_audio(video_id):
     url = f'https://www.youtube.com/watch?v={video_id}'
@@ -54,16 +51,14 @@ def stream_audio(video_id):
             'quiet': True,
             'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
             'skip_download': True,
-            'noplaylist': True,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            formats = info.get('formats', [])
             audio_url = next(
                 (
                     f['url']
-                    for f in formats
+                    for f in info['formats']
                     if f.get('acodec') != 'none'
                     and f.get('vcodec') == 'none'
                     and f.get('ext') in ['m4a', 'webm']
@@ -83,10 +78,7 @@ def stream_audio(video_id):
                 return jsonify({'error': 'Audio URL not found'}), 404
 
     except Exception as e:
-        print(f"❌ yt_dlp error for {video_id}: {e}")
         return jsonify({'error': str(e)}), 500
 
-# ✅ App entry point
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5001))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True, port=5001)
